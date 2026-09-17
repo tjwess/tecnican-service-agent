@@ -28,6 +28,10 @@ const state = {
 
 const els = {
   loginForm: document.querySelector("#loginForm"),
+  settingsButton: document.querySelector("#settingsButton"),
+  settingsClose: document.querySelector("#settingsClose"),
+  settingsDialog: document.querySelector("#settingsDialog"),
+  connectPrompt: document.querySelector("#connectPrompt"),
   baseUrl: document.querySelector("#baseUrl"),
   username: document.querySelector("#username"),
   password: document.querySelector("#password"),
@@ -37,6 +41,7 @@ const els = {
   connectionStatus: document.querySelector("#connectionStatus"),
   focusTicket: document.querySelector("#focusTicket"),
   focusTimer: document.querySelector("#focusTimer"),
+  focusAction: document.querySelector("#focusAction"),
   slotCount: document.querySelector("#slotCount"),
   openSessionCount: document.querySelector("#openSessionCount"),
   totalElapsed: document.querySelector("#totalElapsed"),
@@ -216,6 +221,7 @@ function renderConnection() {
     els.notificationButton.hidden = true;
     els.syncStatus.textContent = "Aguardando conexao";
     els.syncStatus.classList.remove("online");
+    els.connectPrompt.classList.add("visible");
     return;
   }
 
@@ -229,6 +235,7 @@ function renderConnection() {
     ? `Tempo real${syncTime ? ` · ${syncTime}` : ""}`
     : (syncTime ? `Atualizado ${syncTime}` : "Sincronizando");
   els.syncStatus.classList.add("online");
+  els.connectPrompt.classList.remove("visible");
 }
 
 function renderFocus() {
@@ -236,11 +243,15 @@ function renderFocus() {
   if (!running) {
     els.focusTicket.textContent = "Nenhuma sessao rodando";
     els.focusTimer.textContent = "00:00:00";
+    els.focusAction.classList.remove("running");
+    els.focusAction.title = "Selecionar chamado";
     return;
   }
 
   els.focusTicket.textContent = ticketName(running);
   els.focusTimer.textContent = formatSeconds(sessionElapsedSeconds(running));
+  els.focusAction.classList.add("running");
+  els.focusAction.title = "Finalizar atendimento";
 }
 
 function renderStats() {
@@ -542,6 +553,7 @@ async function login(event) {
     els.password.value = "";
     await refreshAll();
     startEventLoop();
+    els.settingsDialog.close();
     showToast("Conectado");
   } catch (error) {
     showToast(error.message);
@@ -600,6 +612,26 @@ function escapeHtml(value) {
 }
 
 els.loginForm.addEventListener("submit", login);
+els.settingsButton.addEventListener("click", () => els.settingsDialog.showModal());
+els.settingsClose.addEventListener("click", () => els.settingsDialog.close());
+els.connectPrompt.addEventListener("click", () => els.settingsDialog.showModal());
+els.focusAction.addEventListener("click", () => {
+  const running = state.sessions.find((session) => session.status === "running");
+  if (running) {
+    openFinish(running.id);
+    return;
+  }
+  document.querySelector(".navButton[data-view='queueView']").click();
+});
+document.querySelectorAll(".navButton").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".navButton").forEach((item) => item.classList.toggle("active", item === button));
+    document.querySelectorAll(".view").forEach((view) => {
+      view.hidden = view.id !== button.dataset.view;
+      view.classList.toggle("activeView", view.id === button.dataset.view);
+    });
+  });
+});
 els.logoutButton.addEventListener("click", logout);
 els.notificationButton.addEventListener("click", enableNotifications);
 els.refreshButton.addEventListener("click", () => refreshAll().catch((error) => showToast(error.message)));

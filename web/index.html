@@ -1,171 +1,54 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Tecnican Service Agent</title>
-    <link rel="stylesheet" href="./styles.css">
-  </head>
-  <body>
-    <main class="shell">
-      <section class="topbar" aria-label="Tecnican connection">
-        <div class="brand">
-          <span class="mark" aria-hidden="true">T</span>
-          <div>
-            <h1>Tecnican</h1>
-            <p id="connectionStatus">Desconectado</p>
-          </div>
-        </div>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tecnican Service Agent</title><link rel="stylesheet" href="./styles.css"></head>
+<body>
+<main class="appShell">
+  <header class="appHeader">
+    <div class="brand"><span class="brandMark">T</span><strong>TECNICAN</strong></div>
+    <div class="headerActions"><span id="connectionStatus" class="connectionStatus">Desconectado</span><button id="refreshButton" class="headerButton" title="Sincronizar" aria-label="Sincronizar">&#8635;</button><button id="settingsButton" class="headerButton" title="Configuracoes" aria-label="Configuracoes">&#9881;</button></div>
+  </header>
+  <nav class="appNav" aria-label="Navegacao principal">
+    <button class="navButton active" data-view="trackerView">Timer</button><button class="navButton" data-view="queueView">Chamados <span id="queueCount" class="navCount">0</span></button><button class="navButton" data-view="historyView">Historico</button>
+  </nav>
+  <section id="trackerView" class="view activeView">
+    <section class="timerComposer">
+      <div class="timerDescription"><span class="fieldLabel">EM ATENDIMENTO</span><h1 id="focusTicket">Nenhuma sessao rodando</h1></div>
+      <div class="focusRow"><div class="clock" id="focusTimer">00:00:00</div><button id="focusAction" class="focusAction" title="Selecionar chamado" aria-label="Selecionar chamado"></button></div>
+    </section>
+    <button id="connectPrompt" class="connectPrompt">Conectar ao GLPI</button>
+    <section class="daySection">
+      <div class="sectionHeading"><h2 id="activeTitle">Hoje</h2><strong id="totalElapsed">00:00:00</strong></div>
+      <div class="summaryLine"><span><strong id="slotCount">0/3</strong> slots ativos</span><span><strong id="openSessionCount">0</strong> sessoes abertas</span></div>
+      <div id="activeSessions" class="entryList"></div>
+    </section>
+  </section>
+  <section id="queueView" class="view" hidden>
+    <div class="viewHeader"><div><h2>Meus chamados</h2><span id="syncStatus" class="syncStatus">Aguardando conexao</span></div></div>
+    <div class="queueTools">
+      <label class="searchField"><span class="fieldLabel">BUSCAR</span><input id="queueSearch" type="search" placeholder="Numero ou descricao"></label>
+      <label><span class="fieldLabel">FILTRO</span><select id="queueFilter"><option value="all">Todos</option><option value="direct">Diretos</option><option value="group">Grupos</option><option value="available">Disponiveis</option></select></label>
+    </div>
+    <div id="ticketQueue" class="entryList ticketList"></div>
+  </section>
+  <section id="historyView" class="view" hidden>
+    <div class="viewHeader"><div><h2>Atendimentos recentes</h2><span class="subtle">Sessoes finalizadas e faturamento</span></div></div>
+    <div id="sessionHistory" class="historyList"></div>
+  </section>
+</main>
 
-        <form id="loginForm" class="login">
-          <label>
-            <span>GLPI</span>
-            <input id="baseUrl" name="baseUrl" type="url" placeholder="https://glpi.example.com" required>
-          </label>
-          <label>
-            <span>Usuario</span>
-            <input id="username" name="username" autocomplete="username" required>
-          </label>
-          <label>
-            <span>Senha</span>
-            <input id="password" name="password" type="password" autocomplete="current-password" required>
-          </label>
-          <button type="submit" class="primary">Conectar</button>
-          <button type="button" id="notificationButton" class="ghost" hidden title="Ativar notificacoes">Avisos</button>
-          <button type="button" id="logoutButton" class="ghost" hidden>Sair</button>
-        </form>
-      </section>
+<dialog id="settingsDialog" class="settingsDialog">
+  <div class="dialogHeader"><div><span class="fieldLabel">TECNICAN AGENT</span><h2>Configuracoes</h2></div><button id="settingsClose" class="closeButton" aria-label="Fechar">&times;</button></div>
+  <form id="loginForm" class="settingsForm">
+    <label><span>Endereco do GLPI</span><input id="baseUrl" name="baseUrl" type="url" placeholder="https://glpi.example.com" required></label>
+    <label><span>Usuario</span><input id="username" name="username" autocomplete="username" required></label>
+    <label><span>Senha</span><input id="password" name="password" type="password" autocomplete="current-password" required></label>
+    <label><span>Atualizacao da fila</span><select id="queueInterval"><option value="30000">30 segundos</option><option value="60000" selected>1 minuto</option><option value="120000">2 minutos</option><option value="180000">3 minutos</option><option value="240000">4 minutos</option><option value="300000">5 minutos</option></select></label>
+    <button type="submit" class="primary wideButton">Conectar</button>
+    <div class="accountActions"><button type="button" id="notificationButton" class="textButton" hidden>Ativar notificacoes</button><button type="button" id="logoutButton" class="textButton dangerText" hidden>Desconectar</button></div>
+  </form>
+</dialog>
 
-      <section class="timerBand" aria-label="Current timer">
-        <div>
-          <p class="eyebrow">Sessao em foco</p>
-          <h2 id="focusTicket">Nenhuma sessao rodando</h2>
-        </div>
-        <div class="clock" id="focusTimer">00:00:00</div>
-      </section>
-
-      <section class="statsBand" aria-label="Work summary">
-        <div>
-          <span id="slotCount">0/3</span>
-          <p>Slots rodando</p>
-        </div>
-        <div>
-          <span id="openSessionCount">0</span>
-          <p>Sessoes abertas</p>
-        </div>
-        <div>
-          <span id="totalElapsed">00:00:00</span>
-          <p>Tempo aberto</p>
-        </div>
-      </section>
-
-      <section class="workspace">
-        <section class="panel activePanel" aria-labelledby="activeTitle">
-          <div class="panelHeader">
-            <div>
-              <p class="eyebrow">Timers</p>
-              <h2 id="activeTitle">Sessoes ativas</h2>
-            </div>
-            <button type="button" id="refreshButton" class="iconButton" title="Atualizar">↻</button>
-          </div>
-          <div id="activeSessions" class="sessionList"></div>
-          <div class="subsectionHeader">
-            <div>
-              <p class="eyebrow">Historico</p>
-              <h3>Atendimentos recentes</h3>
-            </div>
-          </div>
-          <div id="sessionHistory" class="historyList"></div>
-        </section>
-
-        <section class="panel queuePanel" aria-labelledby="queueTitle">
-          <div class="panelHeader">
-            <div>
-              <p class="eyebrow">GLPI</p>
-              <h2 id="queueTitle">Minha fila</h2>
-            </div>
-            <div class="queueStatus">
-              <span id="syncStatus" class="syncStatus">Aguardando conexao</span>
-              <span id="queueCount" class="count">0</span>
-            </div>
-          </div>
-          <div class="queueTools">
-            <label>
-              <span>Buscar</span>
-              <input id="queueSearch" type="search" placeholder="Ticket, numero ou prioridade">
-            </label>
-            <label>
-              <span>Filtro</span>
-              <select id="queueFilter">
-                <option value="all">Todos</option>
-                <option value="direct">Diretos</option>
-                <option value="group">Grupos</option>
-                <option value="available">Disponiveis</option>
-              </select>
-            </label>
-            <label>
-              <span>Atualizacao</span>
-              <select id="queueInterval">
-                <option value="30000">30 segundos</option>
-                <option value="60000" selected>1 minuto</option>
-                <option value="120000">2 minutos</option>
-                <option value="180000">3 minutos</option>
-                <option value="240000">4 minutos</option>
-                <option value="300000">5 minutos</option>
-              </select>
-            </label>
-          </div>
-          <div id="ticketQueue" class="ticketList"></div>
-        </section>
-      </section>
-    </main>
-
-    <dialog id="finishDialog">
-      <form method="dialog" id="finishForm" class="dialogForm">
-        <h2>Finalizar sessao</h2>
-        <label>
-          <span>Descricao do atendimento</span>
-          <textarea id="finishDescription" rows="5" required></textarea>
-        </label>
-        <label class="checkLabel">
-          <input id="finishSolveTicket" type="checkbox">
-          <span>Solucionar o chamado no GLPI</span>
-        </label>
-        <menu>
-          <button value="cancel" class="ghost">Cancelar</button>
-          <button value="default" class="primary">Finalizar</button>
-        </menu>
-      </form>
-    </dialog>
-
-    <dialog id="suspendDialog">
-      <form method="dialog" id="suspendForm" class="dialogForm">
-        <h2>Suspender sessao</h2>
-        <label>
-          <span>Motivo</span>
-          <select id="suspendReason">
-            <option value="aguardando_cliente">Aguardando cliente</option>
-            <option value="aguardando_acesso">Aguardando acesso</option>
-            <option value="aguardando_fornecedor">Aguardando fornecedor</option>
-            <option value="aguardando_equipamento">Aguardando equipamento</option>
-            <option value="aguardando_terceiro">Aguardando terceiro</option>
-            <option value="aguardando_aprovacao">Aguardando aprovacao</option>
-            <option value="aguardando_janela_de_manutencao">Aguardando janela</option>
-            <option value="outro">Outro</option>
-          </select>
-        </label>
-        <label>
-          <span>Detalhe</span>
-          <textarea id="suspendText" rows="3"></textarea>
-        </label>
-        <menu>
-          <button value="cancel" class="ghost">Cancelar</button>
-          <button value="default" class="primary">Suspender</button>
-        </menu>
-      </form>
-    </dialog>
-
-    <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js" type="module"></script>
-  </body>
-</html>
+<dialog id="finishDialog"><form method="dialog" id="finishForm" class="dialogForm"><div><span class="fieldLabel">ATENDIMENTO</span><h2>Finalizar sessao</h2></div><label><span>Descricao do atendimento</span><textarea id="finishDescription" rows="5" required></textarea></label><label class="checkLabel"><input id="finishSolveTicket" type="checkbox"><span>Solucionar o chamado no GLPI</span></label><menu><button value="cancel" class="secondary">Cancelar</button><button value="default" class="primary">Finalizar</button></menu></form></dialog>
+<dialog id="suspendDialog"><form method="dialog" id="suspendForm" class="dialogForm"><div><span class="fieldLabel">ATENDIMENTO</span><h2>Suspender sessao</h2></div><label><span>Motivo</span><select id="suspendReason"><option value="aguardando_cliente">Aguardando cliente</option><option value="aguardando_acesso">Aguardando acesso</option><option value="aguardando_fornecedor">Aguardando fornecedor</option><option value="aguardando_equipamento">Aguardando equipamento</option><option value="aguardando_terceiro">Aguardando terceiro</option><option value="aguardando_aprovacao">Aguardando aprovacao</option><option value="aguardando_janela_de_manutencao">Aguardando janela</option><option value="outro">Outro</option></select></label><label><span>Detalhe</span><textarea id="suspendText" rows="3"></textarea></label><menu><button value="cancel" class="secondary">Cancelar</button><button value="default" class="primary">Suspender</button></menu></form></dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div><script src="./app.js" type="module"></script>
+</body></html>

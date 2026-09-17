@@ -14,10 +14,10 @@
       {
         "label": "main",
         "title": "Tecnican Service Agent",
-        "width": 1440,
-        "height": 900,
-        "minWidth": 980,
-        "minHeight": 680,
+        "width": 500,
+        "height": 760,
+        "minWidth": 390,
+        "minHeight": 620,
         "center": true,
         "resizable": true
       }
