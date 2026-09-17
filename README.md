@@ -4,22 +4,32 @@ Public application repository for the Tecnican Service Agent.
 
 The Agent connects to a GLPI installation running the private Tecnican plugin API. This repository contains only distributable client applications and their build/release automation. It does not contain the GLPI plugin, infrastructure definitions, Portainer automation, credentials, or customer data.
 
-## Current Application
+## Applications
 
-The dependency-free browser client is available in `web/`. Serve that directory with a static HTTP server and enter the URL of a compatible GLPI installation.
+The shared, dependency-free client is available in `web/`. Serve that directory with a static HTTP server for browser use, or package it as a native desktop application with Tauri 2.
 
 ```bash
 python3 -m http.server 5180 --directory web
 ```
 
-## Desktop Roadmap
+### Local desktop development
 
-Phase N will package the shared Agent UI with Tauri and produce:
+Install the Tauri prerequisites for your operating system, then run:
 
-- Windows x64 installers;
-- macOS Universal applications for Intel and Apple Silicon;
-- GitHub Actions build artifacts;
-- signed and notarized releases when signing credentials are configured.
+```bash
+npm install
+npm run icons
+npm run desktop
+```
+
+### Installers
+
+Every relevant push to `main` builds downloadable GitHub Actions artifacts:
+
+- Windows x64: MSI and NSIS installers;
+- macOS Universal: one DMG for Intel and Apple Silicon.
+
+The current macOS artifact uses ad-hoc signing. Apple Developer signing and notarization will be enabled when the required certificates and credentials are configured as repository secrets.
 
 ## Security
 

@@ -1,0 +1,14 @@
+{
+  "name": "tecnican-service-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tecnican Service Agent desktop application",
+  "scripts": {
+    "desktop": "tauri dev",
+    "desktop:build": "tauri build",
+    "icons": "tauri icon assets/app-icon.png"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

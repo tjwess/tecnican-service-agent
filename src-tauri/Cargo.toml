@@ -1,0 +1,20 @@
+[package]
+name = "tecnican-service-agent"
+version = "0.1.0"
+description = "Desktop client for Tecnican field service"
+authors = ["Tecnican"]
+edition = "2021"
+
+[lib]
+name = "tecnican_service_agent_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
