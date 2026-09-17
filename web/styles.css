@@ -360,6 +360,11 @@ textarea {
   font-size: 12px;
 }
 
+.billingMeta {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
 .sessionCard,
 .ticketCard {
   border: 1px solid var(--line);

@@ -42,4 +42,6 @@ Queue synchronization defaults to one minute. The technician can select 30 secon
 
 Phase M adds an authenticated long-poll event channel. It reconnects automatically, stores a per-GLPI cursor for missed events, and leaves the configurable queue synchronization active as fallback.
 
+When the connected plugin exposes billing snapshots, recent history shows real time, billable time, and the calculated variable amount without changing the operational timer.
+
 Enter the public HTTPS URL of a GLPI installation with a compatible Tecnican plugin API, for example `https://glpi.example.com`.

@@ -182,6 +182,13 @@ function formatSeconds(seconds) {
   return [hours, minutes, remaining].map((part) => String(part).padStart(2, "0")).join(":");
 }
 
+function formatMoney(minorUnits, currency = "BRL") {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency,
+  }).format(Number(minorUnits || 0) / 100);
+}
+
 function sessionElapsedSeconds(session) {
   const base = Number(session.elapsed_seconds || 0);
   if (session.status !== "running" || !session.active_started_at) {
@@ -296,6 +303,7 @@ function renderHistory() {
           <span>${escapeHtml(session.finished_at || "-")}</span>
         </div>
         <p class="historyDescription">${escapeHtml(session.finish_description || "Sem descricao")}</p>
+        ${session.billing ? `<div class="meta billingMeta"><span>Real ${formatSeconds(session.billing.real_seconds)}</span><span>Faturavel ${formatSeconds(session.billing.billable_seconds)}</span><span>${escapeHtml(formatMoney(session.billing.amount_minor, session.billing.currency))}</span></div>` : ""}
       </div>
       <span class="historyTime">${formatSeconds(Number(session.elapsed_seconds || 0))}</span>
     </article>
