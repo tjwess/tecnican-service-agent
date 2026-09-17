@@ -40,6 +40,7 @@
   <div class="dialogHeader"><div><span class="fieldLabel">TECNICAN AGENT</span><h2>Configuracoes</h2></div><button id="settingsClose" class="closeButton" aria-label="Fechar">&times;</button></div>
   <form id="loginForm" class="settingsForm">
     <label><span>Endereco do GLPI</span><input id="baseUrl" name="baseUrl" type="url" placeholder="https://glpi.example.com" required></label>
+    <label><span>Base de autenticacao</span><select id="authSource"><option value="local">Base local do GLPI</option></select><small id="authSourceStatus" class="fieldHint">Informe o GLPI para carregar as bases</small></label>
     <label><span>Usuario</span><input id="username" name="username" autocomplete="username" required></label>
     <label><span>Senha</span><input id="password" name="password" type="password" autocomplete="current-password" required></label>
     <label><span>Atualizacao da fila</span><select id="queueInterval"><option value="30000">30 segundos</option><option value="60000" selected>1 minuto</option><option value="120000">2 minutos</option><option value="180000">3 minutos</option><option value="240000">4 minutos</option><option value="300000">5 minutos</option></select></label>

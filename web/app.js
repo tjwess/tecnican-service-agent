@@ -36,6 +36,8 @@ const els = {
   baseUrl: document.querySelector("#baseUrl"),
   username: document.querySelector("#username"),
   password: document.querySelector("#password"),
+  authSource: document.querySelector("#authSource"),
+  authSourceStatus: document.querySelector("#authSourceStatus"),
   logoutButton: document.querySelector("#logoutButton"),
   notificationButton: document.querySelector("#notificationButton"),
   refreshButton: document.querySelector("#refreshButton"),
@@ -154,6 +156,41 @@ async function api(path, options = {}) {
     throw error;
   }
   return payload.data;
+}
+
+async function loadAuthenticationSources() {
+  const baseUrl = els.baseUrl.value.trim().replace(/\/$/, "");
+  if (!baseUrl) {
+    return;
+  }
+
+  const previous = els.authSource.value;
+  els.authSource.disabled = true;
+  els.authSourceStatus.textContent = "Carregando bases...";
+  els.authSourceStatus.classList.remove("error");
+  try {
+    const response = await fetch(`${baseUrl}${API_BASE}/auth/sources.php`, {
+      headers: { Accept: "application/json" },
+    });
+    const payload = await response.json();
+    if (!response.ok || payload.error) {
+      throw new Error(payload.error?.message || `HTTP ${response.status}`);
+    }
+    const sources = payload.data?.sources || [];
+    els.authSource.innerHTML = sources.map((source) =>
+      `<option value="${escapeHtml(source.id)}">${escapeHtml(source.name)}</option>`
+    ).join("");
+    if (sources.some((source) => source.id === previous)) {
+      els.authSource.value = previous;
+    }
+    els.authSourceStatus.textContent = `${sources.length} base${sources.length === 1 ? "" : "s"} disponivel${sources.length === 1 ? "" : "is"}`;
+  } catch (error) {
+    els.authSource.innerHTML = '<option value="local">Base local do GLPI</option>';
+    els.authSourceStatus.textContent = `Nao foi possivel carregar: ${error.message}`;
+    els.authSourceStatus.classList.add("error");
+  } finally {
+    els.authSource.disabled = false;
+  }
 }
 
 function showToast(message) {
@@ -553,6 +590,7 @@ async function login(event) {
       body: {
         username: els.username.value.trim(),
         password: els.password.value,
+        auth_source: els.authSource.value,
         agent_version: "0.1.0-web",
         protocol_version: 1,
         platform: navigator.platform || "web",
@@ -638,9 +676,16 @@ function escapeHtml(value) {
 }
 
 els.loginForm.addEventListener("submit", login);
-els.settingsButton.addEventListener("click", () => els.settingsDialog.showModal());
+els.settingsButton.addEventListener("click", () => {
+  els.settingsDialog.showModal();
+  loadAuthenticationSources();
+});
 els.settingsClose.addEventListener("click", () => els.settingsDialog.close());
-els.connectPrompt.addEventListener("click", () => els.settingsDialog.showModal());
+els.connectPrompt.addEventListener("click", () => {
+  els.settingsDialog.showModal();
+  loadAuthenticationSources();
+});
+els.baseUrl.addEventListener("change", loadAuthenticationSources);
 els.focusAction.addEventListener("click", () => {
   const focused = state.sessions.find((session) => session.id === state.focusedSessionId);
   if (focused?.status === "running") {
