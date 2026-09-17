@@ -25,6 +25,7 @@ const state = {
   eventCursor: "",
   eventBaseUrl: "",
   realtimeConnected: false,
+  sessionClockAnchors: new Map(),
 };
 
 const els = {
@@ -124,6 +125,7 @@ function clearStoredSession() {
   state.tickets = [];
   state.sessions = [];
   state.history = [];
+  state.sessionClockAnchors.clear();
   state.queueSearch = "";
   state.queueFilter = "all";
   state.initializedQueue = false;
@@ -214,13 +216,6 @@ function statusLabel(status) {
   }[status] || status;
 }
 
-function parseServerTime(value) {
-  if (!value) {
-    return null;
-  }
-  return new Date(String(value).replace(" ", "T"));
-}
-
 function formatSeconds(seconds) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -237,18 +232,34 @@ function formatMoney(minorUnits, currency = "BRL") {
 
 function sessionElapsedSeconds(session) {
   const base = Number(session.elapsed_seconds || 0);
-  if (session.status !== "running" || !session.active_started_at) {
+  if (session.status !== "running") {
     return base;
   }
 
-  const activeStarted = parseServerTime(session.active_started_at);
-  if (!activeStarted || Number.isNaN(activeStarted.getTime())) {
+  const anchor = state.sessionClockAnchors.get(session.id);
+  if (!anchor) {
     return base;
   }
 
-  const serverReported = Number(session.accumulated_seconds || 0);
-  const liveDelta = Math.max(0, Math.floor((Date.now() - activeStarted.getTime()) / 1000));
-  return Math.max(base, serverReported + liveDelta);
+  return anchor.baseSeconds + Math.max(0, Math.floor((Date.now() - anchor.receivedAt) / 1000));
+}
+
+function updateSessionClockAnchors(sessions) {
+  const receivedAt = Date.now();
+  const nextAnchors = new Map();
+
+  sessions.forEach((session) => {
+    let baseSeconds = Number(session.elapsed_seconds || 0);
+    const previous = state.sessionClockAnchors.get(session.id);
+    if (session.status === "running" && previous) {
+      const previousElapsed = previous.baseSeconds
+        + Math.max(0, Math.floor((receivedAt - previous.receivedAt) / 1000));
+      baseSeconds = Math.max(baseSeconds, previousElapsed);
+    }
+    nextAnchors.set(session.id, { baseSeconds, receivedAt });
+  });
+
+  state.sessionClockAnchors = nextAnchors;
 }
 
 function ticketName(session) {
@@ -488,6 +499,7 @@ async function refreshAll(options = {}) {
     ]);
     state.user = me.user || me;
     state.sessions = active.sessions || [];
+    updateSessionClockAnchors(state.sessions);
     state.history = history.sessions || [];
     const nextTickets = queue.tickets || [];
     if (options.detectEvents !== false) {
