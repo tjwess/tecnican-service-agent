@@ -14,6 +14,7 @@ const state = {
   sessions: [],
   history: [],
   pendingSessionId: null,
+  focusedSessionId: null,
   queueSearch: "",
   queueFilter: "all",
   initializedQueue: false,
@@ -62,6 +63,9 @@ const els = {
   suspendForm: document.querySelector("#suspendForm"),
   suspendReason: document.querySelector("#suspendReason"),
   suspendText: document.querySelector("#suspendText"),
+  pauseDialog: document.querySelector("#pauseDialog"),
+  pauseForm: document.querySelector("#pauseForm"),
+  pauseReason: document.querySelector("#pauseReason"),
 };
 
 function loadStoredSession() {
@@ -239,8 +243,9 @@ function renderConnection() {
 }
 
 function renderFocus() {
-  const running = state.sessions.find((session) => session.status === "running");
-  if (!running) {
+  const selected = state.sessions.find((session) => session.id === state.focusedSessionId);
+  const focused = selected || state.sessions.find((session) => session.status === "running");
+  if (!focused) {
     els.focusTicket.textContent = "Nenhuma sessao rodando";
     els.focusTimer.textContent = "00:00:00";
     els.focusAction.classList.remove("running");
@@ -248,10 +253,11 @@ function renderFocus() {
     return;
   }
 
-  els.focusTicket.textContent = ticketName(running);
-  els.focusTimer.textContent = formatSeconds(sessionElapsedSeconds(running));
-  els.focusAction.classList.add("running");
-  els.focusAction.title = "Finalizar atendimento";
+  state.focusedSessionId = focused.id;
+  els.focusTicket.textContent = ticketName(focused);
+  els.focusTimer.textContent = formatSeconds(sessionElapsedSeconds(focused));
+  els.focusAction.classList.toggle("running", focused.status === "running");
+  els.focusAction.title = focused.status === "running" ? "Finalizar atendimento" : "Retomar atendimento";
 }
 
 function renderStats() {
@@ -264,10 +270,16 @@ function renderStats() {
 
 function renderSessions() {
   if (state.sessions.length === 0) {
+    state.focusedSessionId = null;
     els.activeSessions.innerHTML = '<p class="empty">Sem sessoes abertas.</p>';
     renderFocus();
     renderStats();
     return;
+  }
+
+  if (!state.sessions.some((session) => session.id === state.focusedSessionId)) {
+    state.focusedSessionId = state.sessions.find((session) => session.status === "running")?.id
+      || state.sessions[0].id;
   }
 
   els.activeSessions.innerHTML = state.sessions.map((session) => {
@@ -275,7 +287,7 @@ function renderSessions() {
     const canResume = session.status === "paused" || session.status === "suspended";
     const elapsed = formatSeconds(sessionElapsedSeconds(session));
     return `
-      <article class="sessionCard" data-session-id="${session.id}">
+      <article class="sessionCard ${session.id === state.focusedSessionId ? "isFocused" : ""}" data-session-id="${session.id}">
         <div>
           <div class="sessionTitle">${escapeHtml(ticketName(session))}</div>
           <div class="meta">
@@ -580,6 +592,12 @@ async function mutateSession(action, body) {
     setBusy(true);
     await api(`/work-sessions/${action}.php`, { method: "POST", body });
     await refreshAll();
+    if (body.session_id) {
+      state.focusedSessionId = body.session_id;
+    } else if (body.ticket_id) {
+      state.focusedSessionId = state.sessions.find((session) => session.ticket_id === body.ticket_id)?.id || null;
+    }
+    renderAll();
   } catch (error) {
     showToast(error.message);
   } finally {
@@ -601,6 +619,14 @@ function openSuspend(sessionId) {
   els.suspendDialog.showModal();
 }
 
+function openPause(sessionId) {
+  state.pendingSessionId = sessionId;
+  state.focusedSessionId = sessionId;
+  els.pauseReason.value = "";
+  renderAll();
+  els.pauseDialog.showModal();
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -616,9 +642,13 @@ els.settingsButton.addEventListener("click", () => els.settingsDialog.showModal(
 els.settingsClose.addEventListener("click", () => els.settingsDialog.close());
 els.connectPrompt.addEventListener("click", () => els.settingsDialog.showModal());
 els.focusAction.addEventListener("click", () => {
-  const running = state.sessions.find((session) => session.status === "running");
-  if (running) {
-    openFinish(running.id);
+  const focused = state.sessions.find((session) => session.id === state.focusedSessionId);
+  if (focused?.status === "running") {
+    openFinish(focused.id);
+    return;
+  }
+  if (focused && (focused.status === "paused" || focused.status === "suspended")) {
+    mutateSession("resume", { session_id: focused.id });
     return;
   }
   document.querySelector(".navButton[data-view='queueView']").click();
@@ -665,11 +695,16 @@ els.ticketQueue.addEventListener("click", (event) => {
 });
 
 els.activeSessions.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-action]");
-  if (!button) {
+  const card = event.target.closest("[data-session-id]");
+  if (!card) {
     return;
   }
-  const card = button.closest("[data-session-id]");
+  state.focusedSessionId = Number(card.dataset.sessionId);
+  const button = event.target.closest("button[data-action]");
+  if (!button) {
+    renderAll();
+    return;
+  }
   const sessionId = Number(card.dataset.sessionId);
   const action = button.dataset.action;
 
@@ -681,8 +716,27 @@ els.activeSessions.addEventListener("click", (event) => {
     openSuspend(sessionId);
     return;
   }
+  if (action === "pause") {
+    openPause(sessionId);
+    return;
+  }
 
   mutateSession(action, { session_id: sessionId });
+});
+
+els.pauseForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const reasonText = els.pauseReason.value.trim();
+  if (!reasonText) {
+    showToast("Informe o motivo da pausa");
+    return;
+  }
+  els.pauseDialog.close();
+  mutateSession("pause", {
+    session_id: state.pendingSessionId,
+    reason_code: "outro",
+    reason_text: reasonText,
+  });
 });
 
 els.finishForm.addEventListener("submit", (event) => {
