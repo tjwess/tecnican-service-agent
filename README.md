@@ -31,6 +31,8 @@ Every relevant push to `main` builds downloadable GitHub Actions artifacts:
 
 The current macOS artifact uses ad-hoc signing. Apple Developer signing and notarization will be enabled when the required certificates and credentials are configured as repository secrets.
 
+The desktop Agent keeps running in the Windows notification area or macOS menu bar when its window is minimized or closed. Use the tray icon to reopen it, or choose `Sair` to terminate the process.
+
 ## Security
 
 Do not commit GLPI credentials, API tokens, signing certificates, `.env` files, or customer-specific URLs. The Agent stores its runtime session locally in the user's browser or desktop profile.
